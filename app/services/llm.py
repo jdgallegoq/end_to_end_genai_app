@@ -7,6 +7,8 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain.schema import StrOutputParser
 from operator import itemgetter
 
+from services.prompts.prompts import SYS_PROMPT
+
 
 class OpenAILLM:
     def __init__(self, model="gpt-4o-mini"):
@@ -15,7 +17,7 @@ class OpenAILLM:
         )
         self.memory = ConversationBufferWindowMemory(k=20, return_messages=True)
 
-    def define_prompt(self, sys_prompt: str = None) -> ChatPromptTemplate:
+    def define_prompt(self, sys_prompt: str = SYS_PROMPT) -> ChatPromptTemplate:
         if not sys_prompt:
             sys_prompt = """
                 Act as a helpful assistant and answer questions to the best of your ability.
@@ -32,13 +34,13 @@ class OpenAILLM:
 
         return prompt
 
-    def chain(self, sys_prompt: str):
+    def chain(self, sys_prompt: str = SYS_PROMPT):
         conversation_chain = (
             RunnablePassthrough.assign(
                 history=RunnableLambda(self.memory.load_memory_variables)
             )
             | itemgetter("history")
-            | self.define_prompt()
+            | self.define_prompt(sys_prompt=sys_prompt)
             | self.llm
             | StrOutputParser()
         )

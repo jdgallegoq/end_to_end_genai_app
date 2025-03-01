@@ -38,8 +38,8 @@ class OpenAILLM:
         conversation_chain = (
             RunnablePassthrough.assign(
                 history=RunnableLambda(self.memory.load_memory_variables)
+                | itemgetter("history")
             )
-            | itemgetter("history")
             | self.define_prompt(sys_prompt=sys_prompt)
             | self.llm
             | StrOutputParser()

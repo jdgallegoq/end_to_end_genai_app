@@ -17,7 +17,7 @@ async def on_user_message(message: cl.Message):
     chatgpt_message = cl.Message(content="")
     async for chunk in chain.astream(
         {"input": message.content},
-        config=RunnableConfig(callbacks=cl.LangchainCallbackHandler()),
+        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
     ):
         await chatgpt_message.stream_token(chunk)
 

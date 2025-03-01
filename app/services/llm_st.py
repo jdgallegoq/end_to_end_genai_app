@@ -28,7 +28,7 @@ class OpenAILLM:
         return prompt
 
     def base_chain(self, sys_prompt: str = SYS_PROMPT):
-        self.chain = self.define_prompt(sys_prompt=SYS_PROMPT) | self.llm
+        self.chain = self.define_prompt(sys_prompt=sys_prompt) | self.llm
 
     def chain(
         self,
@@ -36,7 +36,7 @@ class OpenAILLM:
         st_chat_history: StreamlitChatMessageHistory = None,
     ):
         conversation_chain = RunnableWithMessageHistory(
-            self.base_chain(sys_prompt=SYS_PROMPT),
+            self.base_chain(sys_prompt=sys_prompt),
             lambda session_id: st_chat_history,
             input_messages_key="input",
             history_messages_key="history",

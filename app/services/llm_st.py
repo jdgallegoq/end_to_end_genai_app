@@ -7,6 +7,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_community.chat_message_histories import StreamlitChatMessageHistory
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain.callbacks.base import BaseCallbackHandler
+from langchain_core.runnables import RunnablePassthrough
 
 from operator import itemgetter
 from utils.utils import format_docs
@@ -37,33 +38,41 @@ class OpenAILLM:
         return prompt
 
     def base_chain(self, sys_prompt: str = SYS_PROMPT, retriever: any = None):
-        if self.qa_rag:
-            self.chain = (
-                {
-                    "context": itemgetter("question")
-                    |
-                    retriever
-                    |
-                    format_docs,
-                    "question": itemgetter("question")
-                }
-                |
-                self.define_prompt()
-                |
-                self.llm
+        if self.qa_rag and retriever is not None:
+            # Simpler chain definition using RunnablePassthrough
+            def get_context(question):
+                docs = retriever.get_relevant_documents(question)
+                return format_docs(docs)
+            
+            chain = (
+                RunnablePassthrough.assign(
+                    context=lambda x: get_context(x["question"])
+                )
+                | self.define_prompt()
+                | self.llm
             )
         else:
-            self.chain = self.define_prompt(sys_prompt=sys_prompt) | self.memory | self.llm
+            chain = self.define_prompt(sys_prompt=sys_prompt) | self.memory | self.llm
+        
+        # Store the chain as an instance variable and also return it
+        self.chain = chain
+        return chain
 
     def chain(
         self,
         sys_prompt: str = SYS_PROMPT,
         st_chat_history: StreamlitChatMessageHistory = None,
+        retriever: any = None,
     ):
+        # Create the base chain
+        base_chain = self.base_chain(sys_prompt=sys_prompt, retriever=retriever)
+        
+        # Set up the conversation chain with history
+        # Use question as the input_messages_key to match what's being sent in app_streamlit.py
         conversation_chain = RunnableWithMessageHistory(
-            self.base_chain(sys_prompt=sys_prompt),
+            base_chain,
             lambda session_id: st_chat_history,
-            input_messages_key="input",
+            input_messages_key="question",
             history_messages_key="history",
         )
 
